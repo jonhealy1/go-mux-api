@@ -6,6 +6,7 @@ import (
     "net/http"
     "encoding/json"
     "github.com/gorilla/mux"
+    "io/ioutil"
 )
 
 type Article struct {
@@ -28,7 +29,15 @@ func homePage(w http.ResponseWriter, r *http.Request){
 func returnSingleArticle(w http.ResponseWriter, r *http.Request){
     vars := mux.Vars(r)
     key := vars["id"]
-    fmt.Fprintf(w, "Key: " + key)
+
+    // Loop over all of our Articles
+    // if the article.Id equals the key we pass in
+    // return the article encoded as JSON
+    for _, article := range Articles {
+        if article.Id == key {
+            json.NewEncoder(w).Encode(article)
+        }
+    }
 }
 
 func returnAllArticles(w http.ResponseWriter, r *http.Request){
@@ -36,12 +45,27 @@ func returnAllArticles(w http.ResponseWriter, r *http.Request){
     json.NewEncoder(w).Encode(Articles)
 }
 
+func createNewArticle(w http.ResponseWriter, r *http.Request) {
+    // get the body of our POST request
+    // unmarshal this into a new Article struct
+    // append this to our Articles array.    
+    reqBody, _ := ioutil.ReadAll(r.Body)
+    var article Article 
+    json.Unmarshal(reqBody, &article)
+    // update our global Articles array to include
+    // our new Article
+    Articles = append(Articles, article)
+
+    json.NewEncoder(w).Encode(article)
+}
+
 func handleRequests() {
     // creates a new instance of a mux router
     myRouter := mux.NewRouter().StrictSlash(true)
     // replace http.HandleFunc with myRouter.HandleFunc
     myRouter.HandleFunc("/", homePage)
-    myRouter.HandleFunc("/all", returnAllArticles)
+    myRouter.HandleFunc("/articles", returnAllArticles)
+    myRouter.HandleFunc("/article", createNewArticle).Methods("POST")
     myRouter.HandleFunc("/article/{id}", returnSingleArticle)
     // finally, instead of passing in nil, we want
     // to pass in our newly created router as the second
